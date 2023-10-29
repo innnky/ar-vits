@@ -1,0 +1,9 @@
+librosa==0.9.1
+matplotlib
+numpy
+scipy
+tensorboard
+torch
+amfm_decompy
+speechtokenizer
+tqdm
