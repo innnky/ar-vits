@@ -1,7 +1,5 @@
 import math
 import multiprocessing
-import os
-import argparse
 from random import shuffle
 import torch.multiprocessing as mp
 
@@ -9,7 +7,7 @@ import torch
 from glob import glob
 from tqdm import tqdm
 
-import cnhubert as content_module
+from feature_extractor import cnhubert as content_module
 import utils
 import logging
 

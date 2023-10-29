@@ -1,10 +1,5 @@
 import os
-import json
-import argparse
-import itertools
-import math
 import torch
-from torch import nn, optim
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -20,12 +15,12 @@ logging.getLogger("numba").setLevel(logging.INFO)
 
 from module import commons
 import utils
-from data_utils import (
+from module.data_utils import (
     TextAudioSpeakerLoader,
     TextAudioSpeakerCollate,
     DistributedBucketSampler
 )
-from models import (
+from module.models import (
     SynthesizerTrn,
     MultiPeriodDiscriminator,
 )

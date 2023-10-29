@@ -5,10 +5,9 @@ import soundfile
 import torch
 
 import utils
-from models import SynthesizerTrn
+from module.models import SynthesizerTrn
 from module.mel_processing import spectrogram_torch
-import cnhubert as content_module
-
+from feature_extractor import cnhubert as content_module
 
 vits_model_cache = None
 

@@ -83,5 +83,6 @@
     "gin_channels": 512
   },
   "s2_ckpt_dir": "logs/s2",
-  "s1_ckpt_dir": "logs/s1"
+  "content_module": "whisper"
+
 }

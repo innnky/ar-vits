@@ -35,7 +35,7 @@ def main(args):
         every_n_epochs=config["train"]["save_every_n_epoch"],
         dirpath=ckpt_dir)
     logger = WandbLogger(
-        project="ar_wenet",
+        project="ar_s1",
         name=output_dir.stem,
         save_dir=output_dir,
         # resume the loss curve
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--output_dir',
         type=str,
-        default='logs/ar',
+        default='logs/s1',
         help='directory to save the results')
 
     args = parser.parse_args()

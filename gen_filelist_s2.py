@@ -1,8 +1,8 @@
 from glob import glob
 from random import shuffle
+from data_conf import data_root
 
-data_root = '/home/fish/wenetspeech/dataset_vq'
-filenames = glob(f"{data_root}/**/*.flac", recursive=True)  # [:10]
+filenames = glob(f"{data_root}/**/*.wav", recursive=True)  # [:10]
 
 shuffle(filenames)
 val_num = 8
@@ -11,9 +11,9 @@ val = filenames[-val_num:]
 train.sort()
 val.sort()
 
-with open('filelists/train.list', 'w') as f:
+with open('dump/s2_train_files.list', 'w') as f:
     f.write('\n'.join(train))
-with open('filelists/val.list', 'w') as f:
+with open('dump/s2_val_files.list', 'w') as f:
     f.write('\n'.join(val))
 
 
