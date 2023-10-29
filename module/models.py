@@ -661,6 +661,8 @@ class SynthesizerTrn(nn.Module):
                  n_speakers=0,
                  gin_channels=0,
                  use_sdp=True,
+                 semantic_frame_rate=None,
+                 freeze_quantizer=None,
                  **kwargs):
 
         super().__init__()
@@ -700,15 +702,21 @@ class SynthesizerTrn(nn.Module):
         self.ref_enc = modules.MelStyleEncoder(spec_channels, style_vector_dim=gin_channels)
 
         ssl_dim = 768
-        self.ssl_proj = nn.Conv1d(ssl_dim, ssl_dim, 2, stride=2)
+        assert semantic_frame_rate in ['25hz', "50hz"]
+        self.semantic_frame_rate = semantic_frame_rate
+        if semantic_frame_rate == '25hz':
+            self.ssl_proj = nn.Conv1d(ssl_dim, ssl_dim, 2, stride=2)
+        else:
+            self.ssl_proj = nn.Conv1d(ssl_dim, ssl_dim, 1, stride=1)
+
         self.quantizer = ResidualVectorQuantizer(
             dimension=ssl_dim,
             n_q=1,
             bins=1024
         )
-        # self.ssl_proj.requires_grad_(False)
-        # self.quantizer.requires_grad_(False)
-
+        if freeze_quantizer:
+            self.ssl_proj.requires_grad_(False)
+            self.quantizer.requires_grad_(False)
 
     def forward(self, ssl, y, y_lengths, text, text_lengths):
         y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, y.size(2)), 1).to(y.dtype)
@@ -718,7 +726,9 @@ class SynthesizerTrn(nn.Module):
         with autocast(enabled=False):
             ssl = self.ssl_proj(ssl)
             quantized, codes, commit_loss, quantized_list = self.quantizer(ssl, layers=[0])
-        quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
+
+        if self.semantic_frame_rate == '25hz':
+            quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
 
         x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge)
         z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=ge)
@@ -734,7 +744,8 @@ class SynthesizerTrn(nn.Module):
 
         ssl =  self.ssl_proj(ssl)
         quantized, codes, commit_loss, _ = self.quantizer(ssl, layers=[0])
-        quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
+        if self.semantic_frame_rate == '25hz':
+            quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
 
         x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge, test=test)
         z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale
@@ -755,7 +766,8 @@ class SynthesizerTrn(nn.Module):
         text_lengths = torch.LongTensor([text.size(-1)]).to(text.device)
 
         quantized = self.quantizer.decode(codes)
-        quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
+        if self.semantic_frame_rate == '25hz':
+            quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
 
         x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge)
         z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale

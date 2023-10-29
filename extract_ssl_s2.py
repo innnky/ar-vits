@@ -31,14 +31,14 @@ def process_one(file_path, model, device, content_module):
         print("skip", file_path)
 
 def process_batch(filenames, content_module):
-    print("Loading hubert for content...")
+    print("Loading content model...")
     rank = mp.current_process()._identity
     rank = rank[0] if len(rank) > 0 else 0
     gpu_id = rank % torch.cuda.device_count()
     device = torch.device(f"cuda:{gpu_id}")
     print(device)
     ssl_model = content_module.get_model().to(device)
-    print("Loaded hubert.")
+    print("Loaded content model.")
     for filename in tqdm(filenames):
         process_one(filename, ssl_model, device, content_module)
 

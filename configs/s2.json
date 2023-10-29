@@ -13,20 +13,20 @@
     "batch_size": 16,
     "fp16_run": true,
     "lr_decay": 0.999875,
-    "segment_size": 10240,
+    "segment_size": 20480,
     "init_lr_ratio": 1,
     "warmup_epochs": 0,
     "c_mel": 45,
     "c_kl": 1.0
   },
   "data": {
-    "training_files": "filelists/train.list",
-    "validation_files": "filelists/val.list",
+    "training_files": "dump/s2_train_files.list",
+    "validation_files": "dump/s2_val_files.list",
     "max_wav_value": 32768.0,
-    "sampling_rate": 16000,
-    "filter_length": 1024,
-    "hop_length": 320,
-    "win_length": 1024,
+    "sampling_rate": 32000,
+    "filter_length": 2048,
+    "hop_length": 640,
+    "win_length": 2048,
     "n_mel_channels": 128,
     "mel_fmin": 0.0,
     "mel_fmax": null,
@@ -69,20 +69,22 @@
       10,
       8,
       2,
+      2,
       2
     ],
     "upsample_initial_channel": 512,
     "upsample_kernel_sizes": [
       16,
       16,
-      4,
-      4
+      8,
+      2,
+      2
     ],
     "n_layers_q": 3,
     "use_spectral_norm": false,
-    "gin_channels": 512
+    "gin_channels": 512,
+    "semantic_frame_rate": "50hz",
+    "freeze_quantizer": false
   },
-  "s2_ckpt_dir": "logs/s2",
-  "content_module": "whisper"
-
+  "s2_ckpt_dir": "logs/s2"
 }
