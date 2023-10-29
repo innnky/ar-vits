@@ -1,5 +1,6 @@
 import math
 import multiprocessing
+import os
 from random import shuffle
 import torch.multiprocessing as mp
 
@@ -7,10 +8,10 @@ import torch
 from glob import glob
 from tqdm import tqdm
 
-from feature_extractor import cnhubert as content_module
 import utils
 import logging
 
+from data_conf import data_root
 from module.models import SynthesizerTrn
 
 logging.getLogger("numba").setLevel(logging.WARNING)
@@ -20,25 +21,26 @@ import librosa
 def process_one(f, file_path, model,vq_model, device):
 
     try:
-        wav16k, sr = librosa.load(file_path, sr=16000)
-        wav16k = torch.from_numpy(wav16k).to(device)
-        ssl_content = content_module.get_content(model, wav_16k_tensor=wav16k)
+        # wav16k, sr = librosa.load(file_path, sr=16000)
+        # wav16k = torch.from_numpy(wav16k).to(device)
+        # ssl_content = content_module.get_content(model, wav_16k_tensor=wav16k)
+        ssl_content = torch.load(file_path.replace(".wav", ".ssl.pt")).float().to(device)
         codes = vq_model.extract_latent(ssl_content)
         semantic = " ".join([str(i) for i in codes[0, 0, :].tolist()])
-        f.write(f"{file_path.replace(in_dir, '')}\t{semantic}\n")
+        f.write(f"{file_path}\t{semantic}\n")
         f.flush()
     except:
         print("skip", file_path)
 
 def process_batch(filenames):
-    print("Loading hubert for content...")
+    print("Loading models ...")
     process_idx = mp.current_process()._identity
     rank = process_idx[0] if len(process_idx) > 0 else 0
     gpu_id = rank % torch.cuda.device_count()
     device = torch.device(f"cuda:{gpu_id}")
     print(device)
-    ssl_model = content_module.get_model().to(device)
-    hps = utils.get_hparams_from_file("configs/config.json")
+    # ssl_model = content_module.get_model().to(device)
+    hps = utils.get_hparams_from_file("configs/s2.json")
     vq_model = SynthesizerTrn(
         hps.data.filter_length // 2 + 1,
         hps.train.segment_size // hps.data.hop_length,
@@ -48,15 +50,15 @@ def process_batch(filenames):
     utils.load_checkpoint(utils.latest_checkpoint_path(hps.s2_ckpt_dir, "G_*.pth"), vq_model,
                                                        None, True)
 
-    print("Loaded hubert.")
+    print("Loaded .")
     with open(f"dump/semantic_{process_idx[0]}.tsv", "w") as f:
         for filename in tqdm(filenames):
-            process_one(f, filename, ssl_model,vq_model, device)
+            process_one(f, filename, None ,vq_model, device)
 
-in_dir = "/home/fish/wenetspeech/dataset"
+in_dir = data_root
 
 if __name__ == "__main__":
-    filenames = glob(f"{in_dir}/**/*.flac", recursive=True)  # [:10]
+    filenames = glob(f"{in_dir}/**/*.wav", recursive=True)  # [:10]
     shuffle(filenames)
     multiprocessing.set_start_method("spawn", force=True)
 
@@ -71,3 +73,12 @@ if __name__ == "__main__":
     ]
     for p in processes:
         p.start()
+
+    for p in processes:
+        p.join()
+    with open(f"dump/semantic.tsv", "w") as f:
+        f.write("item_name\tsemantic_audio\n")
+        for i in range(num_processes):
+            with open(f"dump/semantic_{i+1}.tsv", "r") as f2:
+                f.write(f2.read())
+            os.remove(f"dump/semantic_{i+1}.tsv")
