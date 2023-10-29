@@ -139,7 +139,7 @@ def plot_alignment_to_numpy(alignment, info=None):
 
 
 def load_wav_to_torch(full_path):
-    data, sampling_rate = librosa.load(full_path, sr=16000)
+    data, sampling_rate = librosa.load(full_path, sr=None)
     return torch.FloatTensor(data), sampling_rate
 
 

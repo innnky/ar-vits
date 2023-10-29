@@ -11,7 +11,7 @@ from feature_extractor import cnhubert as content_module
 import utils
 import logging
 
-from models_vq import SynthesizerTrn
+from module.models import SynthesizerTrn
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 import librosa

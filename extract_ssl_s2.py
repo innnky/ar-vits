@@ -31,6 +31,7 @@ def process_one(file_path, model, device, content_module):
         print("skip", file_path)
 
 def process_batch(filenames, content_module):
+    content_module = content_module_map[content_module]
     print("Loading content model...")
     rank = mp.current_process()._identity
     rank = rank[0] if len(rank) > 0 else 0
@@ -52,7 +53,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     filenames = glob(f"{data_root}/**/*.wav", recursive=True)  # [:10]
     hps = utils.get_hparams_from_file(args.config)
-    content_module = content_module_map[hps.content_module]
     shuffle(filenames)
     multiprocessing.set_start_method("spawn", force=True)
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     ]
     print([len(c) for c in chunks])
     processes = [
-        multiprocessing.Process(target=process_batch, args=(chunk,content_module)) for chunk in chunks
+        multiprocessing.Process(target=process_batch, args=(chunk,hps.content_module)) for chunk in chunks
     ]
     for p in processes:
         p.start()

@@ -12,7 +12,8 @@ os.makedirs(out_dir, exist_ok=True)
 phoneme_path = os.path.join(out_dir, "phoneme.npy")
 phone_dict = {}
 
-def process_file(wav_path, language):
+def process_file(data):
+    wav_path, language = data
     lab_path = wav_path.replace(".wav", ".lab")
     if os.path.exists(lab_path):
         text = open(lab_path).readline().strip()
@@ -25,7 +26,7 @@ for language in ["zh", 'en', 'ja']:
     filenames = glob(f"{data_root}/{language}/**/*.wav", recursive=True)
 
     # Define the number of processes to use
-    num_processes = 30  # You can adjust this as needed
+    num_processes = 5  # You can adjust this as needed
 
     with Pool(num_processes) as pool:
         results = list(tqdm(pool.imap(process_file, [(f, language) for f in filenames]), total=len(filenames)))

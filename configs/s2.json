@@ -86,5 +86,6 @@
     "semantic_frame_rate": "50hz",
     "freeze_quantizer": false
   },
-  "s2_ckpt_dir": "logs/s2"
+  "s2_ckpt_dir": "logs/s2",
+  "content_module": "whisper"
 }

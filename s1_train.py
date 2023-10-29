@@ -77,9 +77,10 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '-c',
         '--config_file',
         type=str,
-        default='configs/default.yaml',
+        default='configs/s1.yaml',
         help='path of config file')
     # args for dataset
     parser.add_argument(

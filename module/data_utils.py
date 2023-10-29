@@ -68,12 +68,12 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 phoneme = phoneme.split(' ')
                 phoneme_ids = cleaned_text_to_sequence(phoneme)
             except Exception:
-                # print(f"{item_name} not in self.phoneme_data !")
+                print(f"{audiopath} not in self.phoneme_data !")
                 skipped += 1
                 continue
 
-            sslpath = audiopath.replace('.flac', '.hubert.pt')
-            if os.path.exists(audiopath) and os.path.exists(sslpath) and (os.path.getsize(audiopath) // (2 * self.hop_length)>120 or self.val):
+            sslpath = audiopath.replace('.wav', '.ssl.pt')
+            if os.path.exists(audiopath) and os.path.exists(sslpath) and (os.path.getsize(audiopath) / self.sampling_rate /2 > 0.6 or self.val):
                 audiopaths_sid_text_new.append([audiopath,  phoneme_ids])
                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
             else:
@@ -93,7 +93,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             spec = torch.zeros(1025, 100)
             wav = torch.zeros(1, 100*self.hop_length)
             print("load audio error!!!!!!", audiopath)
-        ssl = torch.load(audiopath.replace(".flac", ".hubert.pt")).float()
+        ssl = torch.load(audiopath.replace(".wav", ".ssl.pt")).float()
         ssl = F.interpolate(ssl, size=spec.shape[-1], mode="nearest")
         if self.get_path:
             return (ssl, spec, wav, audiopath)
@@ -106,7 +106,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 sampling_rate, self.sampling_rate))
         audio_norm = audio
         audio_norm = audio_norm.unsqueeze(0)
-        spec_filename = filename.replace(".flac", ".spec.pt")
+        spec_filename = filename.replace(".wav", ".spec.pt")
         if os.path.exists(spec_filename):
             spec = torch.load(spec_filename)
         else:

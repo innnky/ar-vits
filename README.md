@@ -2,5 +2,6 @@
 
 text to speech using decoder-only transformer and VITS
 
-## S2 training
+## vits S2 training
 + 
+## gpt S1 training

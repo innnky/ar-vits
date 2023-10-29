@@ -28,8 +28,8 @@ tgt_sr = 32000
 
 print("Note: this script will overwrite the original files!")
 print("all the wav files under {} will be resampled to {}Hz".format(tgt_path, tgt_sr))
-print("press any key to continue... or press Ctrl+C to cancel")
-os.system('pause')
+input("press enter to continue... or press Ctrl+C to cancel")
+
 if __name__ == "__main__":
     with Pool(num_processes) as pool:
         file_list = get_wav_files(tgt_path)
