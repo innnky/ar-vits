@@ -7,7 +7,7 @@ import torch
 import utils
 from module.models import SynthesizerTrn
 from module.mel_processing import spectrogram_torch
-from feature_extractor import cnhubert as content_module
+# from feature_extractor import cnhubert as content_module
 
 vits_model_cache = None
 
@@ -16,7 +16,7 @@ def _load_model(device="cuda"):
     global vits_model_cache
     if vits_model_cache is not None:
         return vits_model_cache
-    hps = utils.get_hparams_from_file("configs/config.json")
+    hps = utils.get_hparams_from_file("configs/s2.json")
     model_dir = hps.s2_ckpt_dir
     net_g = SynthesizerTrn(
         hps.data.filter_length // 2 + 1,
@@ -36,7 +36,7 @@ def get_spepc(hps, filename):
     if sampling_rate != hps.data.sampling_rate:
         raise ValueError("{} SR doesn't match target {} SR".format(
             sampling_rate, hps.data.sampling_rate))
-    audio_norm = audio / hps.data.max_wav_value
+    audio_norm = audio
     audio_norm = audio_norm.unsqueeze(0)
     spec = spectrogram_torch(audio_norm, hps.data.filter_length,
                              hps.data.sampling_rate, hps.data.hop_length, hps.data.win_length,

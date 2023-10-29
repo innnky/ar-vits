@@ -51,9 +51,10 @@ def process_batch(filenames):
                                                        None, True)
 
     print("Loaded .")
-    with open(f"dump/semantic_{process_idx[0]}.tsv", "w") as f:
-        for filename in tqdm(filenames):
-            process_one(f, filename, None ,vq_model, device)
+    with torch.no_grad():
+        with open(f"dump/semantic_{process_idx[0]}.tsv", "w") as f:
+            for filename in tqdm(filenames):
+                process_one(f, filename, None ,vq_model, device)
 
 in_dir = data_root
 

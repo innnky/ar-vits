@@ -1,34 +1,16 @@
-import os
-
-import numpy as np
 import pandas as pd
-import torch
-
-from t2s.t2s_up import TSARTransformer
-from text import cleaned_text_to_sequence
-from text.cleaner import clean_text
-
-
-# text to semantic
-import argparse
 import os
-import re
 import time
-from pathlib import Path
-
-import librosa
-import numpy as np
 import torch
 from AR.models.t2s_lightning_module import Text2SemanticLightningModule
 from AR.utils.io import load_yaml_config
-from infer import encode_semantic_from_wav16k_numpy
 from text import cleaned_text_to_sequence
 from text.cleaner import text_to_sequence, clean_text
 
 
 text = "当然,不同问题之间错综复杂,对应的结论也有冲突.所以我想要的是'平衡',也就是在所有问题中找到一个'最优解'."
-# text = "当然,不同问题之间错综复杂,对应的结论也有冲突.所以我想要的是'平衡'。"
-text = "幸运的是，此次事故并未造成人员伤亡，但两辆车均受到了不同程度的损伤。事故发生后，许多网友对这名女子的驾驶行为表示了强烈的不解和担忧。同时，也有网友表示，这种行为不仅危害了自己和他人的生命安全，还可能对其他道路使用者造成恐慌和困扰。"
+text = "当然,不同问题之间错综复杂,对应的结论也有冲突.所以我想要的是'平衡'。"
+# text = "幸运的是，此次事故并未造成人员伤亡，但两辆车均受到了不同程度的损伤。事故发生后，许多网友对这名女子的驾驶行为表示了强烈的不解和担忧。同时，也有网友表示，这种行为不仅危害了自己和他人的生命安全，还可能对其他道路使用者造成恐慌和困扰。"
 # text = "皆さん、こんにちは、私は派蒙です。今日はみんなが見たいものをください。"
 prompt_text = "万一他很崇拜我们呢?嘿嘿,"
 prompt_wav_path = "/home/fish/genshin_data/zh/派蒙/vo_DQAQ003_1_paimon_06.wav"
@@ -50,8 +32,8 @@ prompt_semantic = torch.LongTensor([int(idx) for idx in prompt_semantic.split(' 
 print(prompt_semantic)
 n_semantic = 1024
 device = 'cpu'
-config = load_yaml_config("configs/default.yaml")
-ckpt_path = 'logs/ar/ckpt/epoch=34-step=28560.ckpt'
+config = load_yaml_config("configs/s1.yaml")
+ckpt_path = 'logs/s1/ckpt/epoch=4-step=3945.ckpt'
 
 hz = 50
 max_sec = config['data']['max_sec']
@@ -86,4 +68,4 @@ torch.save(pred_semantic.squeeze(0).squeeze(0), 'pred_semantic.pt')
 
 phones = " ".join([str(i) for i in prompt_phones+phones])
 
-os.system(f"python infer.py '{phones}'")
+os.system(f"python s2_infer.py '{phones}'")
