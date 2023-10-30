@@ -1,6 +1,6 @@
 # GPT-VITS
 
-text to speech using decoder-only transformer and VITS
+(WIP) text to speech using decoder-only transformer and VITS 
 ## Note
 + 模型效果未完全验证，不一定会好，请谨慎踩坑，预训练模型还在练
 + 从零训练需要海量数据（至少上千小时？）（类似valle、speartts、soundstorm）数据量少一定不会有好效果。。
