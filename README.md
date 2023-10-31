@@ -4,6 +4,8 @@
 ## Note
 + 模型效果未完全验证，不一定会好，请谨慎踩坑，预训练模型还在练
 + 从零训练需要海量数据（至少上千小时？）（类似valle、speartts、soundstorm）数据量少一定不会有好效果。。
++ 由于vits+refenc在zeroshot方向局限性很大，因此本仓库不追求zeroshot，本仓库的目标是，在有一个大的lm的pretrain的情况下，借助自回归lm的力量，希望在对小数据finetune以后能有很好的韵律。
++ 简单更新了一些初步的 [合成samples](https://huggingface.co/innnky/ar-tts-models/tree/main/gpt-vits)
 ## structure
 ![structure.png](resources%2Fstructure.png)
 
