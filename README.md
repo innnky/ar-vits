@@ -6,6 +6,12 @@
 + 从零训练需要海量数据（至少上千小时？）（类似valle、speartts、soundstorm）数据量少一定不会有好效果。。
 + 由于vits+refenc在zeroshot方向局限性很大，因此本仓库不追求zeroshot，本仓库的目标是，在有一个大的lm的pretrain的情况下，借助自回归lm的力量，希望在对小数据finetune以后能有很好的韵律。
 + 简单更新了一些初步的 [合成samples](https://huggingface.co/innnky/ar-tts-models/tree/main/gpt-vits)
+## Todo
++ [x] 在原神数据上训练
++ [ ] 收集更多中文开源数据训练（预计600H左右）训练并放出pretrain
++ [ ] 编写finetune相关代码，增加sid支持
++ [ ] 优化日语和英语文本前端，收集更多日、英数据（预计每种语言600H）训练并放出pretrain
+
 ## structure
 ![structure.png](resources%2Fstructure.png)
 
