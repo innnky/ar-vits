@@ -1,6 +1,7 @@
 # modified from https://github.com/feng-yufei/shared_debugging_code/blob/main/model/t2s_model.py
 import torch
 from tqdm import tqdm
+from transformers import AutoModelForMaskedLM
 
 from AR.models.utils import make_pad_mask
 from AR.models.utils import topk_sampling
@@ -43,8 +44,13 @@ class Text2SemanticDecoder(nn.Module):
         # should be same as num of kmeans bin
         # assert self.EOS == 1024
 
-        self.ar_text_embedding = TokenEmbedding(
-            self.embedding_dim, self.phoneme_vocab_size, self.p_dropout)
+        self.bert = AutoModelForMaskedLM.from_pretrained(
+            "hfl/chinese-roberta-wwm-ext-large"
+        )
+        for param in self.bert.parameters():
+            param.requires_grad = False
+        self.bert_proj = nn.Linear(1024, self.embedding_dim)
+
         self.ar_text_position = SinePositionalEmbedding(
             self.embedding_dim, dropout=0.1, scale=False, alpha=True)
         self.ar_audio_embedding = TokenEmbedding(
@@ -74,14 +80,26 @@ class Text2SemanticDecoder(nn.Module):
             multidim_average="global",
             ignore_index=self.EOS, )
 
-    def forward(self, x, x_lens, y, y_lens):
+    def forward(self, input_ids, token_type_ids, attention_mask, length, y, y_lens):
         '''
         x: phoneme_ids
         y: semantic_ids
         '''
-        x = self.ar_text_embedding(x)
+        assert not torch.isnan(input_ids).any(), "input_ids has nan!!!\n\n\n\n\n\n\n\n\n\n\n"
+        assert not torch.isnan(token_type_ids).any(), "token_type_ids has nan!!!\n\n\n\n\n\n\n\n\n\n\n"
+        assert not torch.isnan(attention_mask).any(), "attention_mask has nan!!!\n\n\n\n\n\n\n\n\n\n\n"
+
+        res = self.bert(input_ids=input_ids, token_type_ids=token_type_ids,
+                        attention_mask=attention_mask, output_hidden_states=True)
+        bert_feature = res["hidden_states"][-3]
+        assert not torch.isnan(bert_feature).any(), "bert_feature has nan!!!\n\n\n\n\n\n\n\n\n\n\n"
+
+        x = self.bert_proj(bert_feature) * attention_mask.unsqueeze(-1)
+        assert not torch.isnan(x).any(), "bert_x has nan!!!\n\n\n\n\n\n\n\n\n\n\n"
         x = self.ar_text_position(x)
-        x_mask = make_pad_mask(x_lens)
+        assert not torch.isnan(x).any(), "position_x has nan!!!\n\n\n\n\n\n\n\n\n\n\n"
+
+        x_mask = ~(attention_mask.bool())
 
         y_mask = make_pad_mask(y_lens)
         y_mask_int = y_mask.type(torch.int64)
@@ -90,7 +108,7 @@ class Text2SemanticDecoder(nn.Module):
         # Training
         # AR Decoder
         y, targets = self.pad_y_eos(codes, y_mask_int, eos_id=self.EOS)
-        x_len = x_lens.max()
+        x_len = length.max()
         y_len = y_lens.max()
         y_emb = self.ar_audio_embedding(y)
         y_pos = self.ar_audio_position(y_emb)
@@ -131,14 +149,16 @@ class Text2SemanticDecoder(nn.Module):
 
     # 需要看下这个函数和 forward 的区别以及没有 semantic 的时候 prompts 输入什么
     def infer(self,
-              x,
-              x_lens,
+              input_ids, token_type_ids, attention_mask, length,
               prompts,
               top_k: int=-100,
               early_stop_num: int=-1,
               temperature: float=1.0):
 
-        x = self.ar_text_embedding(x)
+        res = self.bert(input_ids=input_ids, token_type_ids=token_type_ids,
+                        attention_mask=attention_mask, output_hidden_states=True)
+        bert_feature = res["hidden_states"][-3]
+        x = self.bert_proj(bert_feature) * attention_mask.unsqueeze(-1)
         x = self.ar_text_position(x)
 
         # AR Decoder

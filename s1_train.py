@@ -30,7 +30,9 @@ def main(args):
 
     seed_everything(config["train"]["seed"], workers=True)
     ckpt_callback: ModelCheckpoint = ModelCheckpoint(
-        save_top_k=-1,
+        save_top_k=3,
+        monitor='top_3_acc',
+        mode='max',
         save_on_train_epoch_end=False,
         every_n_epochs=config["train"]["save_every_n_epoch"],
         dirpath=ckpt_dir)
@@ -96,7 +98,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--output_dir',
         type=str,
-        default='logs/s1',
+        default='logs/s1-bert',
         help='directory to save the results')
 
     args = parser.parse_args()

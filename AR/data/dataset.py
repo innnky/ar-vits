@@ -7,6 +7,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
+from transformers import AutoTokenizer
 
 from text import cleaned_text_to_sequence
 
@@ -74,6 +75,7 @@ class Text2SemanticDataset(Dataset):
             self.inited = True
             del self.semantic_data
             del self.phoneme_data
+        self.tokenizer = AutoTokenizer.from_pretrained("hfl/chinese-roberta-wwm-ext-large")
 
 
     def init_batch(self):
@@ -90,7 +92,7 @@ class Text2SemanticDataset(Dataset):
             # get str
             item_name = self.semantic_data['item_name'][i]
             try:
-                phoneme = self.phoneme_data[item_name]
+                text = self.phoneme_data[item_name]
             except Exception:
                 # print(f"{item_name} not in self.phoneme_data !")
                 num_not_in += 1
@@ -105,23 +107,12 @@ class Text2SemanticDataset(Dataset):
                 num_deleted_bigger += 1
                 continue
 
-            # (T, ), 这个速度不会很慢，所以可以在一开始就处理，无需在 __getitem__ 里面单个处理
-            phoneme = phoneme.split(' ')
-            phoneme_ids = cleaned_text_to_sequence(phoneme)
-            if len(phoneme_ids) >400:
-                num_deleted_ps += 1
-                continue
             if len(semantic_ids) > 1000:
                 num_deleted_bigger += 1
                 continue
 
-            ps_ratio = len(phoneme_ids) / (len(semantic_ids) / self.hz)
 
-            if ps_ratio > self.max_ps_ratio or ps_ratio < self.min_ps_ratio:
-                num_deleted_ps += 1
-                continue
-
-            self.semantic_phoneme.append((semantic_ids, phoneme_ids))
+            self.semantic_phoneme.append((semantic_ids, text))
             idx += 1
             self.item_names.append(item_name)
         if num_not_in > 0:
@@ -145,14 +136,12 @@ class Text2SemanticDataset(Dataset):
         return len(self.semantic_phoneme)
 
     def __getitem__(self, idx: int) -> Dict:
-        semantic_ids, phoneme_ids = self.semantic_phoneme[idx]
-        phoneme_ids_len = len(phoneme_ids)
+        semantic_ids, text = self.semantic_phoneme[idx]
         # semantic tokens target
         semantic_ids_len = len(semantic_ids)
         return {
             'idx': idx,
-            'phoneme_ids': phoneme_ids,
-            'phoneme_ids_len': phoneme_ids_len,
+            'text': text,
             'semantic_ids': semantic_ids,
             'semantic_ids_len': semantic_ids_len
         }
@@ -164,35 +153,32 @@ class Text2SemanticDataset(Dataset):
 
     def collate(self, examples: List[Dict]) -> Dict:
         sample_index: List[int] = []
-        phoneme_ids: List[torch.Tensor] = []
-        phoneme_ids_lens: List[int] = []
+        texts: List[str] = []
         semantic_ids: List[torch.Tensor] = []
         semantic_ids_lens: List[int] = []
 
         for item in examples:
             sample_index.append(item["idx"])
-            phoneme_ids.append(np.array(item["phoneme_ids"], dtype=np.int64))
+            texts.append(item["text"])
             semantic_ids.append(np.array(item["semantic_ids"], dtype=np.int64))
-            phoneme_ids_lens.append(item["phoneme_ids_len"])
             semantic_ids_lens.append(item["semantic_ids_len"])
 
-        # pad 0
-        phoneme_ids = batch_sequences(phoneme_ids)
         semantic_ids = batch_sequences(semantic_ids, pad_value=self.PAD)
 
-        # # convert each batch to torch.tensor
-        phoneme_ids = torch.tensor(phoneme_ids)
         semantic_ids = torch.tensor(semantic_ids)
-        phoneme_ids_lens = torch.tensor(phoneme_ids_lens)
         semantic_ids_lens = torch.tensor(semantic_ids_lens)
+
+        inputs = self.tokenizer(texts, return_tensors="pt", padding=True, return_length=True)
 
         return {
             # List[int]
             "ids": sample_index,
             # torch.Tensor (B, max_phoneme_length) 
-            "phoneme_ids": phoneme_ids,
+            "input_ids": inputs['input_ids'],
+            "token_type_ids": inputs['token_type_ids'],
+            "attention_mask": inputs['attention_mask'],
             # torch.Tensor (B)
-            "phoneme_ids_len": phoneme_ids_lens,
+            "length": inputs['length'],
             # torch.Tensor (B, max_semantic_ids_length)
             "semantic_ids": semantic_ids,
             # torch.Tensor (B)
