@@ -1,8 +1,11 @@
+from pathlib import Path
+
 import pandas as pd
 import os
 import time
 import torch
 from AR.models.t2s_lightning_module import Text2SemanticLightningModule
+from AR.utils import get_newest_ckpt
 from AR.utils.io import load_yaml_config
 from text import cleaned_text_to_sequence
 from text.cleaner import text_to_sequence, clean_text
@@ -33,7 +36,12 @@ print(prompt_semantic)
 n_semantic = 1024
 device = 'cpu'
 config = load_yaml_config("configs/s1.yaml")
-ckpt_path = 'logs/s1/ckpt/epoch=4-step=3945.ckpt'
+
+output_dir = Path('logs/s1')
+ckpt_dir = output_dir / 'ckpt'
+newest_ckpt_name = get_newest_ckpt(os.listdir(ckpt_dir))
+ckpt_path = ckpt_dir / newest_ckpt_name
+print("ckpt_path:", ckpt_path)
 
 hz = 50
 max_sec = config['data']['max_sec']

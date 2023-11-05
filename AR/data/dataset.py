@@ -42,7 +42,7 @@ class Text2SemanticDataset(Dataset):
                  max_sec: int = 100,
                  pad_val: int = 1024,
                  # min value of phoneme/sec
-                 min_ps_ratio: int = 6,
+                 min_ps_ratio: int = 3,
                  # max value of phoneme/sec
                  max_ps_ratio: int = 25) -> None:
         super().__init__()
@@ -52,7 +52,7 @@ class Text2SemanticDataset(Dataset):
         self.phoneme_data = np.load(phoneme_path, allow_pickle=True).item()
         # pad for semantic tokens
         self.PAD: int = pad_val
-        self.hz = 50
+        self.hz = 25
         # max seconds of semantic token
         self.max_sec = max_sec
         self.min_ps_ratio = min_ps_ratio
@@ -111,7 +111,7 @@ class Text2SemanticDataset(Dataset):
             if len(phoneme_ids) >400:
                 num_deleted_ps += 1
                 continue
-            if len(semantic_ids) > 1024:
+            if len(semantic_ids) > 1000:
                 num_deleted_bigger += 1
                 continue
 

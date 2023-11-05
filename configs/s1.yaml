@@ -14,7 +14,7 @@ optimizer:
     decay_steps: 40000
 data:
     max_eval_sample: 8
-    max_sec: 20
+    max_sec: 40
     num_workers: 1
     pad_val: 1024 # same with EOS in model
 model:

@@ -1,7 +1,7 @@
 import os
 
 punctuation = ['!', '?', '…', ",", ".", '-']
-pu_symbols = punctuation + ["SP", "UNK"]
+pu_symbols = punctuation + ["SP", 'SP2', 'SP3', "UNK"]
 pad = '_'
 
 c = ['AA', 'EE', 'OO', 'b', 'c', 'ch', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 'sh', 't', 'w', 'x', 'y', 'z', 'zh']
