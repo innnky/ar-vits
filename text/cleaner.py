@@ -16,11 +16,13 @@ def clean_text(text, language):
             return clean_special(text, language, special_s, target_symbol)
     language_module = language_module_map[language]
     norm_text = language_module.text_normalize(text)
-    phones = language_module.g2p(norm_text)
+    phones, word2ph = language_module.g2p(norm_text)
+    assert len(phones) == sum(word2ph)
+    assert len(norm_text) == len(word2ph)
 
     for ph in phones:
         assert ph in symbols
-    return phones
+    return phones, word2ph, norm_text
 
 
 def clean_special(text, language, special_s, target_symbol):

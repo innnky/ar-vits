@@ -92,7 +92,7 @@ class Text2SemanticDataset(Dataset):
             # get str
             item_name = self.semantic_data['item_name'][i]
             try:
-                text = self.phoneme_data[item_name]
+                phoneme, word2ph, text = self.phoneme_data[item_name]
             except Exception:
                 # print(f"{item_name} not in self.phoneme_data !")
                 num_not_in += 1
@@ -107,12 +107,23 @@ class Text2SemanticDataset(Dataset):
                 num_deleted_bigger += 1
                 continue
 
+            # (T, ), 这个速度不会很慢，所以可以在一开始就处理，无需在 __getitem__ 里面单个处理
+            phoneme = phoneme.split(' ')
+            phoneme_ids = cleaned_text_to_sequence(phoneme)
+            if len(phoneme_ids) >400:
+                num_deleted_ps += 1
+                continue
             if len(semantic_ids) > 1000:
                 num_deleted_bigger += 1
                 continue
 
+            ps_ratio = len(phoneme_ids) / (len(semantic_ids) / self.hz)
 
-            self.semantic_phoneme.append((semantic_ids, text))
+            if ps_ratio > self.max_ps_ratio or ps_ratio < self.min_ps_ratio:
+                num_deleted_ps += 1
+                continue
+
+            self.semantic_phoneme.append((semantic_ids, phoneme_ids))
             idx += 1
             self.item_names.append(item_name)
         if num_not_in > 0:
@@ -136,14 +147,20 @@ class Text2SemanticDataset(Dataset):
         return len(self.semantic_phoneme)
 
     def __getitem__(self, idx: int) -> Dict:
-        semantic_ids, text = self.semantic_phoneme[idx]
+        semantic_ids, phoneme_ids = self.semantic_phoneme[idx]
+        item_name = self.item_names[idx]
+        phoneme_ids_len = len(phoneme_ids)
         # semantic tokens target
         semantic_ids_len = len(semantic_ids)
+        bert_feature = torch.load(item_name.replace(".wav", ".bert.pt"))
+        assert bert_feature.shape[-1] == len(phoneme_ids)
         return {
             'idx': idx,
-            'text': text,
+            'phoneme_ids': phoneme_ids,
+            'phoneme_ids_len': phoneme_ids_len,
             'semantic_ids': semantic_ids,
-            'semantic_ids_len': semantic_ids_len
+            'semantic_ids_len': semantic_ids_len,
+            'bert_feature': bert_feature,
         }
 
     def get_sample_length(self, idx: int):
@@ -153,36 +170,48 @@ class Text2SemanticDataset(Dataset):
 
     def collate(self, examples: List[Dict]) -> Dict:
         sample_index: List[int] = []
-        texts: List[str] = []
+        phoneme_ids: List[torch.Tensor] = []
+        phoneme_ids_lens: List[int] = []
         semantic_ids: List[torch.Tensor] = []
         semantic_ids_lens: List[int] = []
 
+
         for item in examples:
             sample_index.append(item["idx"])
-            texts.append(item["text"])
+            phoneme_ids.append(np.array(item["phoneme_ids"], dtype=np.int64))
             semantic_ids.append(np.array(item["semantic_ids"], dtype=np.int64))
+            phoneme_ids_lens.append(item["phoneme_ids_len"])
             semantic_ids_lens.append(item["semantic_ids_len"])
 
+        # pad 0
+        phoneme_ids = batch_sequences(phoneme_ids)
         semantic_ids = batch_sequences(semantic_ids, pad_value=self.PAD)
 
+        # # convert each batch to torch.tensor
+        phoneme_ids = torch.tensor(phoneme_ids)
         semantic_ids = torch.tensor(semantic_ids)
+        phoneme_ids_lens = torch.tensor(phoneme_ids_lens)
         semantic_ids_lens = torch.tensor(semantic_ids_lens)
+        bert_padded = torch.FloatTensor(len(examples), 1024, max(phoneme_ids_lens))
+        bert_padded.zero_()
 
-        inputs = self.tokenizer(texts, return_tensors="pt", padding=True, return_length=True)
+        for idx, item in enumerate(examples):
+            bert = item['bert_feature']
+            bert_padded[idx, :, :bert.shape[-1]] = bert
 
         return {
             # List[int]
             "ids": sample_index,
-            # torch.Tensor (B, max_phoneme_length) 
-            "input_ids": inputs['input_ids'],
-            "token_type_ids": inputs['token_type_ids'],
-            "attention_mask": inputs['attention_mask'],
+            # torch.Tensor (B, max_phoneme_length)
+            "phoneme_ids": phoneme_ids,
             # torch.Tensor (B)
-            "length": inputs['length'],
+            "phoneme_ids_len": phoneme_ids_lens,
             # torch.Tensor (B, max_semantic_ids_length)
             "semantic_ids": semantic_ids,
             # torch.Tensor (B)
             "semantic_ids_len": semantic_ids_lens,
+            # torch.Tensor (B, 1024, max_phoneme_length)
+            "bert_feature": bert_padded,
         }
 
 

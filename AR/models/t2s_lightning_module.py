@@ -25,10 +25,9 @@ class Text2SemanticLightningModule(LightningModule):
         opt = self.optimizers()
         scheduler = self.lr_schedulers()
         loss, acc = self.model.forward(
-            batch['input_ids'], batch['token_type_ids'],
-            batch['attention_mask'], batch['length'],
-            batch['semantic_ids'], batch['semantic_ids_len']
-        )
+            batch['phoneme_ids'], batch['phoneme_ids_len'],
+            batch['semantic_ids'], batch['semantic_ids_len'],
+            batch['bert_feature'])
         self.manual_backward(loss)
 
         if batch_idx > 0 and batch_idx % 4 == 0:
@@ -60,9 +59,10 @@ class Text2SemanticLightningModule(LightningModule):
     def validation_step(self, batch: Dict, batch_idx: int):
         # get loss
         loss, acc = self.model.forward(
-            batch['input_ids'], batch['token_type_ids'],
-            batch['attention_mask'], batch['length'],
-            batch['semantic_ids'], batch['semantic_ids_len'])
+            batch['phoneme_ids'], batch['phoneme_ids_len'],
+            batch['semantic_ids'], batch['semantic_ids_len'],
+            batch['bert_feature']
+        )
 
         self.log(
             "val_total_loss",
@@ -83,8 +83,10 @@ class Text2SemanticLightningModule(LightningModule):
         semantic_len = batch['semantic_ids'].size(1)
         prompt_len = min(int(semantic_len * 0.5), 150)
         prompt = batch['semantic_ids'][:, :prompt_len]
-        pred_semantic = self.model.infer(batch['input_ids'], batch['token_type_ids'],
-            batch['attention_mask'], batch['length'], prompt)
+        pred_semantic = self.model.infer(batch['phoneme_ids'],
+                                         batch['phoneme_ids_len'], prompt,
+                                         batch['bert_feature']
+                                         )
         save_name = f'semantic_toks_{batch_idx}.pt'
         save_path = os.path.join(self.eval_dir, save_name)
         torch.save(pred_semantic.detach().cpu(), save_path)

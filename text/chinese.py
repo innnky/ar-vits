@@ -42,11 +42,10 @@ def replace_punctuation(text):
     return replaced_text
 
 def g2p(text):
-    text = replace_punctuation(text)
     pattern = r'(?<=[{0}])\s*'.format(''.join(punctuation))
     sentences = [i for i in re.split(pattern, text) if i.strip()!='']
-    phones = _g2p(sentences)
-    return phones
+    phones, word2ph = _g2p(sentences)
+    return phones, word2ph
 
 
 def _get_initials_finals(word):
@@ -64,6 +63,7 @@ def _get_initials_finals(word):
 
 def _g2p(segments):
     phones_list = []
+    word2ph = []
     for seg in segments:
         pinyins = []
         # Replace all English words in the sentence
@@ -92,6 +92,7 @@ def _g2p(segments):
             if c == v:
                 assert c in punctuation
                 phone = [c]
+                word2ph.append(1)
             else:
                 v_without_tone = v[:-1]
                 tone = v[-1]
@@ -132,8 +133,10 @@ def _g2p(segments):
                 new_c, new_v = pinyin_to_symbol_map[pinyin].split(' ')
                 new_v = new_v + tone
                 phone = [new_c, new_v]
+                word2ph.append(len(phone))
+
             phones_list += phone
-    return phones_list
+    return phones_list, word2ph
 
 
 
@@ -141,6 +144,8 @@ def text_normalize(text):
     numbers = re.findall(r'\d+(?:\.?\d+)?', text)
     for number in numbers:
         text = text.replace(number, cn2an.an2cn(number), 1)
+    text = replace_punctuation(text)
+
     return text
 
 
