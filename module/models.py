@@ -172,6 +172,7 @@ class TextEncoder(nn.Module):
             kernel_size,
             p_dropout)
         self.text_embedding = nn.Embedding(len(symbols), hidden_channels)
+        self.bert_proj = nn.Conv1d(1024, hidden_channels, 1)
 
         self.mrte = MRTE()
 
@@ -186,16 +187,19 @@ class TextEncoder(nn.Module):
 
         self.proj = nn.Conv1d(hidden_channels, out_channels * 2, 1)
 
-    def forward(self, y, y_lengths, text, text_lengths, ge, test=None):
+    def forward(self, y, y_lengths, text, text_lengths, bert, ge, test=None):
         y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, y.size(2)), 1).to(y.dtype)
 
         y = self.ssl_proj(y * y_mask) * y_mask
         y = self.encoder_ssl(y * y_mask, y_mask)
 
         text_mask = torch.unsqueeze(commons.sequence_mask(text_lengths, text.size(1)), 1).to(y.dtype)
-        if test == 1 :
-            text[:, :] = 0
+
         text = self.text_embedding(text).transpose(1, 2)
+        bert = self.bert_proj(bert)
+        if test == 1:
+            bert = 0
+        text = text + bert
         text = self.encoder_text(text * text_mask, text_mask)
 
 
@@ -718,7 +722,7 @@ class SynthesizerTrn(nn.Module):
             self.ssl_proj.requires_grad_(False)
             self.quantizer.requires_grad_(False)
 
-    def forward(self, ssl, y, y_lengths, text, text_lengths):
+    def forward(self, ssl, y, y_lengths, text, text_lengths, bert):
         y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, y.size(2)), 1).to(y.dtype)
         ge = self.ref_enc(y * y_mask, y_mask)
 
@@ -730,7 +734,7 @@ class SynthesizerTrn(nn.Module):
         if self.semantic_frame_rate == '25hz':
             quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
 
-        x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge)
+        x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, bert, ge)
         z, m_q, logs_q, y_mask = self.enc_q(y, y_lengths, g=ge)
         z_p = self.flow(z, y_mask, g=ge)
 
@@ -738,7 +742,7 @@ class SynthesizerTrn(nn.Module):
         o = self.dec(z_slice, g=ge)
         return o, commit_loss, ids_slice, y_mask, y_mask, (z, z_p, m_p, logs_p, m_q, logs_q), quantized
 
-    def infer(self, ssl, y, y_lengths, text, text_lengths, test=None, noise_scale=0.5):
+    def infer(self, ssl, y, y_lengths, text, text_lengths, bert, test=None, noise_scale=0.5):
         y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, y.size(2)), 1).to(y.dtype)
         ge = self.ref_enc(y * y_mask, y_mask)
 
@@ -747,7 +751,7 @@ class SynthesizerTrn(nn.Module):
         if self.semantic_frame_rate == '25hz':
             quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
 
-        x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge, test=test)
+        x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, bert, ge, test=test)
         z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale
 
         z = self.flow(z_p, y_mask, g=ge, reverse=True)
@@ -769,7 +773,7 @@ class SynthesizerTrn(nn.Module):
         if self.semantic_frame_rate == '25hz':
             quantized = F.interpolate(quantized, size=int(quantized.shape[-1] * 2), mode="nearest")
 
-        x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge)
+        x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, bert, ge)
         z_p = m_p + torch.randn_like(m_p) * torch.exp(logs_p) * noise_scale
 
         z = self.flow(z_p, y_mask, g=ge, reverse=True)

@@ -92,7 +92,7 @@ class Text2SemanticDataset(Dataset):
             # get str
             item_name = self.semantic_data['item_name'][i]
             try:
-                phoneme, word2ph, text = self.phoneme_data[item_name]
+                phoneme = self.phoneme_data[item_name]
             except Exception:
                 # print(f"{item_name} not in self.phoneme_data !")
                 num_not_in += 1

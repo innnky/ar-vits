@@ -151,16 +151,16 @@ def train_and_evaluate(rank, epoch, hps, nets, optims, schedulers, scaler, loade
 
     net_g.train()
     net_d.train()
-    for batch_idx, (ssl, ssl_lengths, spec, spec_lengths, y, y_lengths, text, text_lengths) in tqdm(enumerate(train_loader)):
+    for batch_idx, (ssl, ssl_lengths, spec, spec_lengths, y, y_lengths, text, text_lengths, bert) in tqdm(enumerate(train_loader)):
         spec, spec_lengths = spec.cuda(rank, non_blocking=True), spec_lengths.cuda(rank, non_blocking=True)
         y, y_lengths = y.cuda(rank, non_blocking=True), y_lengths.cuda(rank, non_blocking=True)
         ssl = ssl.cuda(rank, non_blocking=True)
         ssl_lengths = ssl_lengths.cuda(rank, non_blocking=True)
         text, text_lengths = text.cuda(rank, non_blocking=True), text_lengths.cuda(rank, non_blocking=True)
-
+        bert = bert.cuda(rank, non_blocking=True)
         with autocast(enabled=hps.train.fp16_run):
             y_hat, kl_ssl, ids_slice, x_mask, z_mask, \
-                (z, z_p, m_p, logs_p, m_q, logs_q), stats_ssl = net_g(ssl, spec, spec_lengths, text, text_lengths)
+                (z, z_p, m_p, logs_p, m_q, logs_q), stats_ssl = net_g(ssl, spec, spec_lengths, text, text_lengths, bert)
 
             mel = spec_to_mel_torch(
                 spec,
@@ -265,15 +265,16 @@ def evaluate(hps, generator, eval_loader, writer_eval):
     audio_dict = {}
     print("Evaluating ...")
     with torch.no_grad():
-        for batch_idx, (ssl, ssl_lengths, spec, spec_lengths, y, y_lengths, text, text_lengths) in enumerate(eval_loader):
+        for batch_idx, (ssl, ssl_lengths, spec, spec_lengths, y, y_lengths, text, text_lengths, bert) in enumerate(eval_loader):
             print(111)
             spec, spec_lengths = spec.cuda(), spec_lengths.cuda()
             y, y_lengths = y.cuda(), y_lengths.cuda()
             ssl = ssl.cuda()
             text, text_lengths = text.cuda(), text_lengths.cuda()
+            bert = bert.cuda()
             for test in [0, 1]:
 
-                y_hat, mask, *_ = generator.module.infer(ssl,spec,  spec_lengths,text, text_lengths, test=test)
+                y_hat, mask, *_ = generator.module.infer(ssl,spec,  spec_lengths,text, text_lengths,bert, test=test)
                 y_hat_lengths = mask.sum([1, 2]).long() * hps.data.hop_length
 
                 mel = spec_to_mel_torch(

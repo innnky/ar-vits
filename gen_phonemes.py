@@ -81,7 +81,7 @@ if __name__ == '__main__':
         filenames = glob(f"{data_root}/{language}/**/*.wav", recursive=True)
 
         # Define the number of processes to use
-        num_processes = 1  # You can adjust this as needed
+        num_processes = 8  # You can adjust this as needed
         # multiprocessing.set_start_method("spawn", force=True)
 
         with Pool(num_processes) as pool:
@@ -89,6 +89,6 @@ if __name__ == '__main__':
 
         for result in results:
             if result is not None:
-                phone_dict[result[0]] = (result[1], results[2], results[3])
+                phone_dict[result[0]] = result[1]
 
     np.save(phoneme_path, phone_dict)
