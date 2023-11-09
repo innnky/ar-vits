@@ -8,7 +8,9 @@
 + 简单更新了一些初步的 [合成samples](https://huggingface.co/innnky/ar-tts-models/tree/main/gpt-vits)
 ## Todo
 + [x] 在原神数据上训练
-+ [ ] 收集更多中文开源数据训练（预计600H左右）训练并放出pretrain
++ [x] 收集更多中文开源数据训练（预计600H左右）训练并放出pretrain（x） --> out-of-distribution文本效果很差，例如读文言文 并且长句效果不好, 会抽风
+  + [ ] 添加word level bert 并repeat到phoneme level改善out-of-distribution效果
+  + [ ] 将同一spk的数据多条合并为一条音频 提高平均数据时长 改善长句合成效果稳定性
 + [ ] 编写finetune相关代码，增加sid支持
 + [ ] 优化日语和英语文本前端，收集更多日、英数据（预计每种语言600H）训练并放出pretrain
 
