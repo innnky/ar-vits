@@ -42,8 +42,7 @@ class Text2SemanticDecoder(nn.Module):
         assert self.EOS == self.vocab_size - 1
         # should be same as num of kmeans bin
         # assert self.EOS == 1024
-        self.bert_proj_down = nn.Linear(1024, 4)
-        self.bert_proj_up = nn.Linear(4, self.embedding_dim)
+        self.bert_proj = nn.Linear(1024, self.embedding_dim)
         self.ar_text_embedding = TokenEmbedding(
             self.embedding_dim, self.phoneme_vocab_size, self.p_dropout)
         self.ar_text_position = SinePositionalEmbedding(
@@ -81,7 +80,7 @@ class Text2SemanticDecoder(nn.Module):
         y: semantic_ids
         '''
         x = self.ar_text_embedding(x)
-        x = x + self.bert_proj_up(self.bert_proj_down(bert_feature.transpose(1, 2)))
+        x = x + self.bert_proj(bert_feature.transpose(1,2))
         x = self.ar_text_position(x)
         x_mask = make_pad_mask(x_lens)
 
@@ -142,7 +141,7 @@ class Text2SemanticDecoder(nn.Module):
               temperature: float=1.0):
 
         x = self.ar_text_embedding(x)
-        x = x + self.bert_proj_up(self.bert_proj_down(bert_feature.transpose(1, 2)))
+        x = x + self.bert_proj(bert_feature.transpose(1,2))
         x = self.ar_text_position(x)
 
         # AR Decoder
