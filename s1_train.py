@@ -98,7 +98,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--output_dir',
         type=str,
-        default='logs/s1-bert',
+        default='logs/s1-bert-double',
         help='directory to save the results')
 
     args = parser.parse_args()

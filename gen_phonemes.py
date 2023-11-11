@@ -63,7 +63,6 @@ def process_file(data):
             print(f"Error in genshin, {text}")
             return None
         try:
-            text = text.replace("%", '-').replace('￥', ',')
             phones, word2ph, norm_text = clean_text(text, language)
             bert_feature = get_bert_feature(norm_text, word2ph)
             assert bert_feature.shape[-1] == len(phones)
