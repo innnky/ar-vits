@@ -169,7 +169,7 @@ class Text2SemanticDataset(Dataset):
     def __getitem__(self, idx: int) -> Dict:
         item_name = self.item_names[idx]
         spk = os.path.dirname(item_name)
-        if 'aishell' in spk:
+        if 'aishell' in spk and random.random() < 0.3:
             try:
                 idxs = [idx] + random.sample(self.speaker_idx_dict[spk], 5)
             except Exception as e:
