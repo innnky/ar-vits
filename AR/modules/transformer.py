@@ -1,5 +1,6 @@
 # modified from https://github.com/lifeiteng/vall-e/blob/main/valle/modules/transformer.py
 import copy
+import math
 import numbers
 from functools import partial
 from typing import Any
@@ -17,6 +18,32 @@ from torch import Tensor
 from torch.nn import functional as F
 
 _shape_t = Union[int, List[int], torch.Size]
+
+
+class AlibiPostionEmbedding:
+    def __init__(self, nheads, maxpos):
+        context_position = torch.arange(maxpos)[:, None]
+        memory_position = torch.arange(maxpos)[None, :]
+        relative_position = memory_position - context_position
+        relative_position = torch.abs(relative_position).unsqueeze(0).expand(nheads, -1,-1)
+        self.slopes = torch.Tensor(self.get_slopes(nheads)) * -1
+        self.alibi = self.slopes.unsqueeze(1).unsqueeze(1) * relative_position
+        self.alibi = self.alibi.view(nheads, maxpos, maxpos)
+
+    def get_slopes(self, n):
+        def get_slopes_power_of_2(n):
+            start = (2**(-2**-(math.log2(n)-3)))
+            ratio = start
+            return [start*ratio**i for i in range(n)]
+        if math.log2(n).is_integer():
+            return get_slopes_power_of_2(n)                   #In the paper, we only train models that have 2^a heads for some a. This function has
+        else:                                                 #some good properties that only occur when the input is a power of 2. To maintain that even
+            closest_power_of_2 = 2**math.floor(math.log2(n))  #when the number of heads is not a power of 2, we use this workaround.
+            return get_slopes_power_of_2(closest_power_of_2) + self.get_slopes(2*closest_power_of_2)[0::2][:n-closest_power_of_2]
+
+    def __call__(self, x):
+        #N, T, C
+        return self.alibi[:, :x.size(1), :x.size(1)].to(x.device)
 
 
 class LayerNorm(nn.Module):
@@ -191,9 +218,6 @@ class TransformerEncoderLayer(nn.Module):
             d_model,
             nhead,
             dropout=dropout,
-            batch_first=batch_first,
-            linear1_cls=linear1_self_attention_cls,
-            linear2_cls=linear2_self_attention_cls,
             **factory_kwargs, )
 
         # Implementation of Feedforward model
@@ -301,8 +325,7 @@ class TransformerEncoderLayer(nn.Module):
             x,
             x,
             attn_mask=attn_mask,
-            key_padding_mask=key_padding_mask,
-            need_weights=False, )[0]
+            key_padding_mask=key_padding_mask)[0]
         return self.dropout1(x)
 
     # feed forward block
