@@ -13,6 +13,8 @@ from torch import nn
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAccuracy
 
+from AR.modules.transformer import AlibiPostionEmbedding
+
 default_config = {
     "embedding_dim": 512,
     "hidden_dim": 512,
@@ -45,12 +47,10 @@ class Text2SemanticDecoder(nn.Module):
         self.bert_proj = nn.Linear(1024, self.embedding_dim)
         self.ar_text_embedding = TokenEmbedding(
             self.embedding_dim, self.phoneme_vocab_size, self.p_dropout)
-        self.ar_text_position = SinePositionalEmbedding(
-            self.embedding_dim, dropout=0.1, scale=False, alpha=True)
         self.ar_audio_embedding = TokenEmbedding(
             self.embedding_dim, self.vocab_size, self.p_dropout)
-        self.ar_audio_position = SinePositionalEmbedding(
-            self.embedding_dim, dropout=0.1, scale=False, alpha=True)
+
+        self.alibi = AlibiPostionEmbedding(self.num_head, 10000)
 
         self.h = TransformerEncoder(
             TransformerEncoderLayer(
@@ -81,7 +81,7 @@ class Text2SemanticDecoder(nn.Module):
         '''
         x = self.ar_text_embedding(x)
         x = x + self.bert_proj(bert_feature.transpose(1,2))
-        x = self.ar_text_position(x)
+
         x_mask = make_pad_mask(x_lens)
 
         y_mask = make_pad_mask(y_lens)
@@ -93,8 +93,7 @@ class Text2SemanticDecoder(nn.Module):
         y, targets = self.pad_y_eos(codes, y_mask_int, eos_id=self.EOS)
         x_len = x_lens.max()
         y_len = y_lens.max()
-        y_emb = self.ar_audio_embedding(y)
-        y_pos = self.ar_audio_position(y_emb)
+        y_pos = self.ar_audio_embedding(y)
 
         xy_padding_mask = torch.concat([x_mask, y_mask], dim=1)
         ar_xy_padding_mask = xy_padding_mask
@@ -120,9 +119,10 @@ class Text2SemanticDecoder(nn.Module):
         xy_attn_mask = new_attn_mask
         # x 和完整的 y 一次性输入模型
         xy_pos = torch.concat([x, y_pos], dim=1)
+        attn_bias = self.alibi(xy_pos)
         xy_dec, _ = self.h(
             (xy_pos, None),
-            mask=xy_attn_mask, )
+            mask=xy_attn_mask, attn_bias=attn_bias)
         logits = self.ar_predict_layer(xy_dec[:, x_len:]).permute(0, 2, 1)
         # loss
         # from feiteng: 每次 duration 越多, 梯度更新也应该更多, 所以用 sum
@@ -142,7 +142,6 @@ class Text2SemanticDecoder(nn.Module):
 
         x = self.ar_text_embedding(x)
         x = x + self.bert_proj(bert_feature.transpose(1,2))
-        x = self.ar_text_position(x)
 
         # AR Decoder
         y = prompts
@@ -151,8 +150,7 @@ class Text2SemanticDecoder(nn.Module):
         x_attn_mask = torch.zeros((x_len, x_len), dtype=torch.bool)
         stop = False
         for _ in tqdm(range(1500)):
-            y_emb = self.ar_audio_embedding(y)
-            y_pos = self.ar_audio_position(y_emb)
+            y_pos = self.ar_audio_embedding(y)
             # x 和逐渐增长的 y 一起输入给模型
             xy_pos = torch.concat([x, y_pos], dim=1)
             y_len = y.shape[1]
@@ -167,10 +165,11 @@ class Text2SemanticDecoder(nn.Module):
                 value=False, )
             xy_attn_mask = torch.concat(
                 [x_attn_mask_pad, y_attn_mask], dim=0).to(y.device)
+            attn_bias = self.alibi(xy_pos)
 
             xy_dec, _ = self.h(
                 (xy_pos, None),
-                mask=xy_attn_mask, )
+                mask=xy_attn_mask, attn_bias=attn_bias)
             logits = self.ar_predict_layer(xy_dec[:, -1])
             samples = topk_sampling(
                 logits, top_k=top_k, top_p=1.0, temperature=temperature)

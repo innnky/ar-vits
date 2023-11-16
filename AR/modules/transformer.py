@@ -152,7 +152,8 @@ class TransformerEncoder(nn.Module):
             src: Tensor,
             mask: Optional[Tensor]=None,
             src_key_padding_mask: Optional[Tensor]=None,
-            return_layer_states: bool=False, ) -> Tensor:
+            return_layer_states: bool=False,
+            attn_bias=None) -> Tensor:
         r"""Pass the input through the encoder layers in turn.
 
         Args:
@@ -171,7 +172,7 @@ class TransformerEncoder(nn.Module):
                 output = mod(
                     output,
                     src_mask=mask,
-                    src_key_padding_mask=src_key_padding_mask, )
+                    src_key_padding_mask=src_key_padding_mask, attn_bias=attn_bias)
                 layer_states.append(output[0])
 
             if self.norm is not None:
@@ -183,7 +184,7 @@ class TransformerEncoder(nn.Module):
         for mod in self.layers:
             output = mod(output,
                          src_mask=mask,
-                         src_key_padding_mask=src_key_padding_mask)
+                         src_key_padding_mask=src_key_padding_mask, attn_bias=attn_bias)
 
         if self.norm is not None:
             output = self.norm(output)
@@ -273,7 +274,8 @@ class TransformerEncoderLayer(nn.Module):
             self,
             src: Tensor,
             src_mask: Optional[Tensor]=None,
-            src_key_padding_mask: Optional[Tensor]=None, ) -> Tensor:
+            src_key_padding_mask: Optional[Tensor]=None,
+            attn_bias=None) -> Tensor:
         r"""Pass the input through the encoder layer.
 
         Args:
@@ -302,11 +304,11 @@ class TransformerEncoderLayer(nn.Module):
             x = x + self._sa_block(
                 self.norm1(x, stage_embedding),
                 src_mask,
-                src_key_padding_mask, )
+                src_key_padding_mask, attn_bias)
             x = x + self._ff_block(self.norm2(x, stage_embedding))
         else:
             x = self.norm1(
-                x + self._sa_block(x, src_mask, src_key_padding_mask),
+                x + self._sa_block(x, src_mask, src_key_padding_mask, attn_bias),
                 stage_embedding, )
             x = self.norm2(x + self._ff_block(x), stage_embedding)
 
@@ -319,13 +321,15 @@ class TransformerEncoderLayer(nn.Module):
             self,
             x: Tensor,
             attn_mask: Optional[Tensor],
-            key_padding_mask: Optional[Tensor], ) -> Tensor:
+            key_padding_mask: Optional[Tensor],
+            attn_bias=None) -> Tensor:
         x = self.self_attn(
             x,
             x,
             x,
             attn_mask=attn_mask,
-            key_padding_mask=key_padding_mask)[0]
+            key_padding_mask=key_padding_mask,
+            attn_bias=attn_bias)[0]
         return self.dropout1(x)
 
     # feed forward block

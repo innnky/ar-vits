@@ -1,7 +1,4 @@
 # modified from https://github.com/feng-yufei/shared_debugging_code/blob/main/t2s_dataset.py
-import os.path
-import random
-from collections import defaultdict
 from typing import Dict
 from typing import List
 
@@ -71,7 +68,6 @@ class Text2SemanticDataset(Dataset):
         self.item_names = []
 
         self.inited = False
-        self.speaker_idx_dict = defaultdict(set)
 
         if not self.inited:
             # 调用初始化函数
@@ -126,7 +122,7 @@ class Text2SemanticDataset(Dataset):
             if ps_ratio > self.max_ps_ratio or ps_ratio < self.min_ps_ratio:
                 num_deleted_ps += 1
                 continue
-            self.speaker_idx_dict[os.path.dirname(item_name)].add(idx)
+
             self.semantic_phoneme.append((semantic_ids, phoneme_ids))
             idx += 1
             self.item_names.append(item_name)
@@ -143,50 +139,20 @@ class Text2SemanticDataset(Dataset):
             )
         # 345410 for LibriTTS
         print("dataset.__len__():", self.__len__())
+
     def __get_item_names__(self) -> List[str]:
         return self.item_names
 
     def __len__(self) -> int:
         return len(self.semantic_phoneme)
 
-    def getitem(self, idx: int) -> Dict:
+    def __getitem__(self, idx: int) -> Dict:
         semantic_ids, phoneme_ids = self.semantic_phoneme[idx]
         item_name = self.item_names[idx]
         phoneme_ids_len = len(phoneme_ids)
         # semantic tokens target
         semantic_ids_len = len(semantic_ids)
         bert_feature = torch.load(item_name.replace(".wav", ".bert.pt"))
-        assert bert_feature.shape[-1] == len(phoneme_ids)
-        return {
-            'idx': idx,
-            'phoneme_ids': phoneme_ids,
-            'phoneme_ids_len': phoneme_ids_len,
-            'semantic_ids': semantic_ids,
-            'semantic_ids_len': semantic_ids_len,
-            'bert_feature': bert_feature,
-        }
-
-    def __getitem__(self, idx: int) -> Dict:
-        item_name = self.item_names[idx]
-        spk = os.path.dirname(item_name)
-        if 'aishell' in spk and random.random() < 0.3:
-            try:
-                idxs = [idx] + random.sample(self.speaker_idx_dict[spk], 5)
-            except Exception as e:
-                print(e)
-                idxs = [idx]
-        else:
-            idxs = [idx]
-        datas = [self.getitem(i) for i in idxs]
-        if sum([i['semantic_ids_len'] for i in datas]) > 60 * 25:
-            print("too long")
-            datas = [datas[0]]
-
-        phoneme_ids = [ph for item in datas for ph in item['phoneme_ids']]
-        semantic_ids = [s for item in datas for s in item['semantic_ids']]
-        phoneme_ids_len = len(phoneme_ids)
-        semantic_ids_len = len(semantic_ids)
-        bert_feature = torch.cat([item['bert_feature'] for item in datas], dim=-1)
         assert bert_feature.shape[-1] == len(phoneme_ids)
         return {
             'idx': idx,
