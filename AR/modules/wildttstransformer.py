@@ -84,6 +84,7 @@ class TTSDecoder(nn.Module):
         past_kvs1, past_kv_cross, past_kvs2 = None, None, None
         audio_alibi = self.alibi(inp)
         back_map = torch.zeros([batch_size, 1], device=phone.device, dtype=torch.long)
+        back_map += 23
         length_counter = torch.zeros([batch_size], device=phone.device, dtype=torch.long)
         real_phone_lengths = (~phone_mask).long().sum(-1) #N,
         assert batch_size == 1
@@ -139,4 +140,4 @@ class TTSDecoder(nn.Module):
             inp = self.transducer.encode(output)
             inp = self.layer_norm(inp)
             inps = torch.cat([inps, inp], 1)
-        return torch.cat(final_outputs, 1), alignment[:, :i, :phone.size(1)]
+        return torch.cat(final_outputs, 1)[:,1:-1], alignment[:, :i, :phone.size(1)]

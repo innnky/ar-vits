@@ -1,5 +1,6 @@
 import json
 
+import matplotlib.pyplot as plt
 import torch
 
 from AR.modules.wildttstransformer import TTSDecoder
@@ -16,13 +17,12 @@ with open(config_path, 'r') as f:
     argdict = json.load(f)
     hp.__dict__ = argdict
 
-decoder = TTSDecoder(hp, 1000)
+decoder = TTSDecoder(hp)
 
-q = torch.randint(0, 100, (2, 31))
-q_len = torch.LongTensor([31, 31])
-q_mask = torch.ones(2, 31).bool()
-phone = torch.randn(2, 13, 768)
-spkr = torch.randn(2, 768)
-phone_mask = torch.ones(2, 13).bool()
+q = torch.randint(0, 100, (1, 31))
+q_mask = torch.zeros(1, 31).bool()
+phone = torch.randn(1, 13, 768)
+spkr = torch.randn(1, 768)
+phone_mask = torch.zeros(1, 13).bool()
 
-res = decoder.forward(q, phone, q_mask, phone_mask, )
+res = decoder.inference_topkp_sampling_batch(phone, phone_mask, )

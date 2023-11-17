@@ -95,8 +95,9 @@ class Text2SemanticDecoder(nn.Module):
         y = prompts
 
         res, alignment = self.decoder.inference_topkp_sampling_batch(x, x_mask, prior=y)
-
-        return res[:, 1:-1]
+        print(alignment.shape)
+        torch.save(alignment.detach().cpu()[0], 'alignment.npy')
+        return res
 
     def pad_y_eos(self, y, y_mask_int, eos_id):
         targets = F.pad(
