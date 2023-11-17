@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm
+
 from .transformers import TransformerDecoder, TransformerDecoderLayer, TransformerEncoderLayer, TransformerEncoder, CrossAttnOnlyLayer, AlibiPostionEmbedding
 from .transducer import Transducer
 import numpy as np
@@ -56,45 +58,36 @@ class TTSDecoder(nn.Module):
             'encoder_attention': enc_attn
         }
 
-    def encode_phone(self, phone, spkr, phone_mask):
+    def encode_phone(self, phone, phone_mask):
         phone = self.layer_norm_phone(phone)
-        phone = torch.cat([spkr, phone], 1)
-        ex_phone_mask = torch.cat([torch.zeros((spkr.size(0), 1), device=spkr.device, dtype=torch.bool), phone_mask], 1)
         phone_alibi = self.alibi(phone)
-        phone_alibi[:, 0] = 0
-        phone_alibi[:, :, 0] = 0
-        phone, enc_attn = self.encoder(phone, mask=None, attn_bias=phone_alibi, src_key_padding_mask=ex_phone_mask)
-        phone = phone[:, 1:]
+        phone, enc_attn = self.encoder(phone, mask=None, attn_bias=phone_alibi, src_key_padding_mask=phone_mask)
         return phone
 
-    def inference_topkp_sampling_batch(self, phone, spkr, phone_mask, prior=None, output_alignment=False):
+    def inference_topkp_sampling_batch(self, phone, phone_mask, prior=None, output_alignment=False):
         batch_size = phone.size(0)
         final_outputs = [0 for _ in range(batch_size)]
-        spkr = self.layer_norm_spkr(spkr.unsqueeze(1))
         inp = self.layer_norm(self.transducer.start_token(phone.device)) #1, 1, C
         inp = inp.expand(batch_size, -1, -1) #N, 1, C
-        inp = torch.cat([spkr, inp], 1)
         prior_size = 0
         if prior is not None:
             prior = self.transducer.encode(prior)
             prior = self.layer_norm(prior)
             prior_size = prior.size(1)
             inp = torch.cat([inp, prior], 1)
-        phone = self.encode_phone(phone, spkr, phone_mask)
+        phone = self.encode_phone(phone, phone_mask)
         tgt_mask = self.tgt_mask[:inp.size(1), :inp.size(1)].to(inp.device)
         inps = inp
         #Decode
-        past_kvs1, past_kv_cross, past_kvs2, clusters = None, None, None, torch.empty([batch_size, 0, self.hp.n_cluster_groups], device=phone.device, dtype=torch.long)
+        past_kvs1, past_kv_cross, past_kvs2 = None, None, None
         audio_alibi = self.alibi(inp)
-        audio_alibi[:, 0] = 0
-        audio_alibi[:, :, 0] = 0
         back_map = torch.zeros([batch_size, 1], device=phone.device, dtype=torch.long)
         length_counter = torch.zeros([batch_size], device=phone.device, dtype=torch.long)
         real_phone_lengths = (~phone_mask).long().sum(-1) #N,
         if output_alignment:
             assert batch_size == 1, "Now only support output alignment for bs = 1 for debugging issues..."
             alignment = torch.zeros((1, self.hp.max_output_length, self.hp.max_output_length), device=phone.device)
-        for i in range(self.hp.max_output_length):
+        for i in tqdm(range(self.hp.max_output_length)):
             cond, _, _, new_1 = self.decoder(inp, memory=None, attn_bias=audio_alibi, tgt_mask=tgt_mask, past_kvs=past_kvs1)
             #Only feed in the current frame and the next frame attending!
             t_length, c_length = phone.size(1), phone.size(2) # T, C
