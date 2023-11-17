@@ -86,11 +86,7 @@ class Transducer(nn.Module):
 
 
     def start_token(self, device):
-        ret = []
-        for embed in self.embeddings:
-            ret.append(embed(torch.zeros((1, 1), device=device, dtype=torch.long) + self.hp.n_codes + 1))
-        ret = torch.cat(ret, 2) # 1, 1, C
-        return ret
+        return self.embedding(torch.zeros((1, 1), device=device, dtype=torch.long) + self.hp.n_codes + 1)
 
     def truncate_to_end_token(self, x):
         #x: 1, T, 4
@@ -122,7 +118,7 @@ class Transducer(nn.Module):
         #x: N, T
         return self.embedding(x)
 
-    def decode(self, c, gt):
+    def decode(self, c):
         # c = self.linear(c)
         # out, _, _, _ = self.model(c, memory=None, tgt_mask=self.tgt_mask)
         return self.linear(c)
