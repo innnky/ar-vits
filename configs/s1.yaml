@@ -70,7 +70,7 @@ model:
     max_output_length: 2000
     sample_rate: 16000
     n_codes: 1024
-    n_cluster_groups: 4
+    n_cluster_groups: 1
     phone_context_window: 4
     phoneset_size: 1000
 inference:

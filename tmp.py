@@ -1,4 +1,4 @@
-import json
+import yaml
 
 import matplotlib.pyplot as plt
 import torch
@@ -12,10 +12,10 @@ class AttrDict(dict):
         self.__dict__ = self
 
 hp = AttrDict()
-config_path = 'configs/s1.json'
+config_path = 'configs/s1.yaml'
 with open(config_path, 'r') as f:
-    argdict = json.load(f)
-    hp.__dict__ = argdict
+    argdict = yaml.load(f, Loader=yaml.FullLoader)
+    hp.__dict__ = argdict['model']
 
 decoder = TTSDecoder(hp)
 
@@ -25,4 +25,5 @@ phone = torch.randn(1, 13, 768)
 spkr = torch.randn(1, 768)
 phone_mask = torch.zeros(1, 13).bool()
 
-res = decoder.inference_topkp_sampling_batch(phone, phone_mask, )
+res = decoder.inference_topkp_sampling_batch(phone, phone_mask, prior=q)
+print(res)

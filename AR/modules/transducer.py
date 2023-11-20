@@ -69,24 +69,19 @@ class Transducer(nn.Module):
     def __init__(self, hp):
         super().__init__()
         self.hp = hp
+        assert hp.hidden_size % hp.n_cluster_groups == 0
+        per_embedding = hp.hidden_size // hp.n_cluster_groups
         #End Start Repetition (Although End Token should not be encoded)
         self.n_decoder_codes = hp.n_codes + 3 if self.hp.use_repetition_token else hp.n_codes + 2
-        self.embedding = nn.Embedding(self.n_decoder_codes, hp.hidden_size )
-
-        # ar_hp = Namespace(hidden_size=hp.ar_hidden_size, nheads=hp.ar_nheads, layer_norm_eps=hp.layer_norm_eps,
-        #                   ffd_size=hp.ar_ffd_size)
-        # self.model = TransformerDecoder(
-        #     nn.ModuleList(
-        #         [TransformerDecoderLayer(ar_hp, with_cross_attention=False) for i in range(hp.ar_layer)]
-        #     )
-        # )
-        # tgt_mask = (torch.tril(torch.ones(hp.n_cluster_groups, hp.n_cluster_groups), diagonal=0) == 0)
-        # self.register_buffer('tgt_mask', tgt_mask)
-        self.linear = nn.Linear(hp.hidden_size, self.n_decoder_codes)
-
+        self.embeddings = nn.ModuleList([nn.Embedding(self.n_decoder_codes, per_embedding) for i in range(hp.n_cluster_groups)])
+        self.decoder = ARCodeTransformer(hp, self.n_decoder_codes)
 
     def start_token(self, device):
-        return self.embedding(torch.zeros((1, 1), device=device, dtype=torch.long) + self.hp.n_codes + 1)
+        ret = []
+        for embed in self.embeddings:
+            ret.append(embed(torch.zeros((1, 1), device=device, dtype=torch.long) + self.hp.n_codes + 1))
+        ret = torch.cat(ret, 2) # 1, 1, C
+        return ret
 
     def truncate_to_end_token(self, x):
         #x: 1, T, 4
@@ -115,11 +110,15 @@ class Transducer(nn.Module):
         return ret
 
     def encode(self, x):
-        #x: N, T
-        return self.embedding(x)
+        #x: N, T, 4
+        x = torch.split(x, 1, 2)
+        ret = []
+        for q, embed in zip(x, self.embeddings):
+            q = embed(q.squeeze(-1))
+            ret.append(q)
+        ret = torch.cat(ret, -1)
+        return ret
 
-    def decode(self, c):
-        # c = self.linear(c)
-        # out, _, _, _ = self.model(c, memory=None, tgt_mask=self.tgt_mask)
-        return self.linear(c)
+    def decode(self, c, gt):
+        return self.decoder(c, gt)
 
