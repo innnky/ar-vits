@@ -85,7 +85,7 @@ class TTSDecoder(nn.Module):
         phone = phone[:, 1:]
         return phone
 
-    def inference_topkp_sampling_batch(self, phone, phone_mask, prior=None, output_alignment=True):
+    def inference_topkp_sampling_batch(self, phone, phone_mask, prior=None, phone_prior_offset=0, output_alignment=True):
         pri = prior.clone()
         prior = prior.unsqueeze(-1) if prior is not None else None
         spkr = torch.zeros((phone.size(0), self.hp.hidden_size), device=phone.device, dtype=phone.dtype)
@@ -111,7 +111,7 @@ class TTSDecoder(nn.Module):
         audio_alibi[:, 0] = 0
         audio_alibi[:, :, 0] = 0
         back_map = torch.zeros([batch_size, 1], device=phone.device, dtype=torch.long)
-        back_map+=23
+        back_map += phone_prior_offset
         length_counter = torch.zeros([batch_size], device=phone.device, dtype=torch.long)
         real_phone_lengths = (~phone_mask).long().sum(-1) #N,
         if output_alignment:

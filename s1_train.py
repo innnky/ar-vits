@@ -30,7 +30,7 @@ def main(args):
 
     seed_everything(config["train"]["seed"], workers=True)
     ckpt_callback: ModelCheckpoint = ModelCheckpoint(
-        save_top_k=3,
+        save_top_k=15,
         monitor='top_3_acc',
         mode='max',
         save_on_train_epoch_end=False,

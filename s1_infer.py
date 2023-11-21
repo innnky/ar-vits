@@ -14,8 +14,8 @@ from text.cleaner import text_to_sequence, clean_text
 
 text = "当然,不同问题之间错综复杂,对应的结论也有冲突.所以我想要的是'平衡',也就是在所有问题中找到一个'最优解'."
 text = "当然,不同问题之间错综复杂,对应的结论也有冲突."
-text = "幸运的是，此次事故并未造成人员伤亡，但两辆车均受到了不同程度的损伤。事故发生后，许多网友对这名女子的驾驶行为表示了强烈的不解和担忧。同时，也有网友表示，这种行为不仅危害了自己和他人的生命安全，还可能对其他道路使用者造成恐慌和困扰。"
-# text = "先帝创业未半而中道崩殂，今天下三分，益州疲弊，此诚危急存亡之秋也。然侍卫之臣不懈于内，忠志之士忘身于外者，盖追先帝之殊遇，欲报之于陛下也。"
+text = "幸运的是，此次事故并未造成人员伤亡，但两辆车均受到了不同程度的损伤。事故发生后，许多网友对这名女子的驾驶行为表示了强烈的不解和担忧。同时，也有网友表示，这种行为不仅危害了自己和他人的生命安全，还可能对其他道路使用者造成恐慌和困扰。。。"
+# text = "先帝创业未半而中道崩殂，今天下三分，益州疲弊，此诚危急存亡之秋也。然侍卫之臣不懈于内，忠志之士忘身于外者，盖追先帝之殊遇，欲报之于陛下也。。。"
 # text = "先帝创业未半而中道崩殂，今天下三分，益州疲弊，此诚危急存亡之秋也。"
 
 # text = "皆さん、こんにちは、私は派蒙です。今日はみんなが見たいものをください。"
@@ -33,6 +33,10 @@ semantic_data = pd.read_csv('dump/semantic.tsv', delimiter='\t')
 
 
 phones, bert = text2phoneid(prompt_text+text)
+prompt_ph,_ = text2phoneid(prompt_text)
+ph_offset = len(prompt_ph)
+print("len prompt phones:", len(prompt_ph))
+
 prompt_semantic = semantic_data[semantic_data['item_name'] == prompt_wav_path]['semantic_audio'].values[0]
 prompt_semantic = torch.LongTensor([int(idx) for idx in prompt_semantic.split(' ')])
 
@@ -73,6 +77,7 @@ with torch.no_grad():
         all_phoneme_len,
         prompt,
         bert,
+        prompt_phone_len=ph_offset,
         top_k=config['inference']['top_k'],
         early_stop_num=hz * max_sec)
 

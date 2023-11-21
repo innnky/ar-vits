@@ -83,6 +83,7 @@ class Text2SemanticDecoder(nn.Module):
               x_lens,
               prompts,
               bert_feature,
+              prompt_phone_len=0,
               top_k: int=-100,
               early_stop_num: int=-1,
               temperature: float=1.0):
@@ -94,9 +95,7 @@ class Text2SemanticDecoder(nn.Module):
 
         y = prompts
 
-        res, alignment = self.decoder.inference_topkp_sampling_batch(x, x_mask, prior=y)
-        print(alignment.shape)
-        torch.save(alignment.detach().cpu()[0], 'alignment.npy')
+        res, alignment = self.decoder.inference_topkp_sampling_batch(x, x_mask, prior=y, phone_prior_offset=prompt_phone_len)
         return res
 
     def pad_y_eos(self, y, y_mask_int, eos_id):
