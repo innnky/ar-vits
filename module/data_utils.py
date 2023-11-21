@@ -68,7 +68,7 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 phoneme = phoneme.split(' ')
                 phoneme_ids = cleaned_text_to_sequence(phoneme)
             except Exception:
-                # print(f"{audiopath} not in self.phoneme_data !")
+                print(f"{audiopath} not in self.phoneme_data !")
                 skipped += 1
                 continue
 
@@ -77,7 +77,6 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 audiopaths_sid_text_new.append([audiopath,  phoneme_ids])
                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
             else:
-                # print("skip", audiopath)
                 skipped += 1
         print("skipped: ", skipped, ", total: ", len(self.audiopaths_sid_text))
         self.audiopaths_sid_text = audiopaths_sid_text_new
@@ -87,9 +86,6 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
         # separate filename, speaker_id and text
         audiopath, phoneme_ids = audiopath_sid_text
         text = torch.FloatTensor(phoneme_ids)
-        bert_feature = torch.load(audiopath.replace(".wav", ".bert.pt"))
-        assert bert_feature.shape[-1] == text.shape[-1]
-
         # bert, phones, tone, language = self.get_text(text, word2ph, phones, tone, language,audiopath)
         try:
             spec, wav = self.get_audio(audiopath)
@@ -99,7 +95,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             print("load audio error!!!!!!", audiopath)
         ssl = torch.load(audiopath.replace(".wav", ".ssl.pt")).float()
         ssl = F.interpolate(ssl, size=spec.shape[-1], mode="nearest")
-        return (ssl, spec, wav, text, bert_feature)
+        if self.get_path:
+            return (ssl, spec, wav, audiopath)
+        return (ssl, spec, wav, text)
 
     def get_audio(self, filename):
         audio, sampling_rate = load_wav_to_torch(filename)
@@ -188,7 +186,6 @@ class TextAudioSpeakerCollate():
         wav_padded = torch.FloatTensor(len(batch), 1, max_wav_len)
         ssl_padded = torch.FloatTensor(len(batch), batch[0][0].size(1), max_ssl_len)
         text_padded = torch.LongTensor(len(batch),  max_text_len)
-        bert_padded = torch.FloatTensor(len(batch), 1024, max_text_len)
 
         spec_padded.zero_()
         wav_padded.zero_()
@@ -214,12 +211,8 @@ class TextAudioSpeakerCollate():
             text_padded[i, :text.size(0)] = text
             text_lengths[i] = text.size(0)
 
-            bert = row[4]
-            bert_padded[i, :, :bert.shape[-1]] = bert
 
-
-
-        return ssl_padded, ssl_lengths, spec_padded, spec_lengths, wav_padded, wav_lengths, text_padded, text_lengths, bert_padded
+        return ssl_padded, ssl_lengths, spec_padded, spec_lengths, wav_padded, wav_lengths, text_padded, text_lengths
 
 
 class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
