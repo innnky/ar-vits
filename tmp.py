@@ -18,12 +18,15 @@ with open(config_path, 'r') as f:
     hp.__dict__ = argdict['model']
 
 decoder = TTSDecoder(hp)
+total = sum([param.nelement() for param in decoder.decoder.parameters()])
 
-q = torch.randint(0, 100, (1, 31))
-q_mask = torch.zeros(1, 31).bool()
-phone = torch.randn(1, 13, 768)
-spkr = torch.randn(1, 768)
-phone_mask = torch.zeros(1, 13).bool()
-
-res = decoder.inference_topkp_sampling_batch(phone, phone_mask, prior=q)
-print(res)
+print("Number of parameter: %.2fM" % (total / 1e6))
+#
+# q = torch.randint(0, 100, (1, 31))
+# q_mask = torch.zeros(1, 31).bool()
+# phone = torch.randn(1, 13, 768)
+# spkr = torch.randn(1, 768)
+# phone_mask = torch.zeros(1, 13).bool()
+#
+# res = decoder.inference_topkp_sampling_batch(phone, phone_mask, prior=q)
+# print(res)

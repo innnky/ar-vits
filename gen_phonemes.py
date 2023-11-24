@@ -54,8 +54,6 @@ def get_bert_feature(text, word2ph):
 
 def process_file(data):
     wav_path, language = data
-    if "aidatatang" in wav_path:
-        return None
     lab_path = wav_path.replace(".wav", ".lab")
     if os.path.exists(lab_path):
         text = open(lab_path).readline().strip()
@@ -63,6 +61,7 @@ def process_file(data):
             print(f"Error in genshin, {text}")
             return None
         try:
+            text = text.replace("%", '-').replace('￥', ',').replace('^', '-')
             phones, word2ph, norm_text = clean_text(text, language)
             bert_feature = get_bert_feature(norm_text, word2ph)
             assert bert_feature.shape[-1] == len(phones)
