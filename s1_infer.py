@@ -45,7 +45,7 @@ n_semantic = 1024
 device = 'cpu'
 config = load_yaml_config("configs/s1.yaml")
 
-output_dir = Path('logs/s1-bert-mqtts')
+output_dir = Path('logs/s1-mqvits')
 ckpt_dir = output_dir / 'ckpt'
 newest_ckpt_name = get_newest_ckpt(os.listdir(ckpt_dir))
 ckpt_path = ckpt_dir / newest_ckpt_name
