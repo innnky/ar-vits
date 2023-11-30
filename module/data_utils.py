@@ -60,7 +60,9 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
 
         audiopaths_sid_text_new = []
         lengths = []
-        skipped = 0
+        skipped_phone = 0
+        skipped_exist = 0
+        skipped_dur = 0
         for item in tqdm(self.audiopaths_sid_text):
             audiopath = item[0]
             try:
@@ -68,17 +70,20 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
                 phoneme = phoneme.split(' ')
                 phoneme_ids = cleaned_text_to_sequence(phoneme)
             except Exception:
-                print(f"{audiopath} not in self.phoneme_data !")
-                skipped += 1
+                skipped_phone += 1
                 continue
-
             sslpath = audiopath.replace('.wav', '.ssl.pt')
-            if os.path.exists(audiopath) and os.path.exists(sslpath) and (os.path.getsize(audiopath) / self.sampling_rate /2 > 0.6 or self.val):
+            if not (os.path.exists(audiopath) and os.path.exists(sslpath)) :
+                skipped_exist += 1
+                continue
+            if  (os.path.getsize(audiopath) / self.sampling_rate /2 > 0.6 or self.val):
                 audiopaths_sid_text_new.append([audiopath,  phoneme_ids])
                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
             else:
-                skipped += 1
-        print("skipped: ", skipped, ", total: ", len(self.audiopaths_sid_text))
+                skipped_dur += 1
+                continue
+        print("skipped_phone: ", skipped_phone, ", skipped_exist: ", skipped_exist, ", skipped_dur: ", skipped_dur)
+        print("total left: ", len(audiopaths_sid_text_new))
         self.audiopaths_sid_text = audiopaths_sid_text_new
         self.lengths = lengths
 
