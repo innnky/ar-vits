@@ -62,7 +62,7 @@ model:
     sampling_temperature: 1.0
     top_k: -1
     min_top_k: 3
-    top_p: 0.8
+    top_p: 0.3
     sample_num: 4
     length_penalty_max_length: 150
     length_penalty_max_prob: 0.95

@@ -19,8 +19,8 @@ text = "幸运的是，此次事故并未造成人员伤亡，但两辆车均受
 # text = "先帝创业未半而中道崩殂，今天下三分，益州疲弊，此诚危急存亡之秋也。"
 
 # text = "皆さん、こんにちは、私は派蒙です。今日はみんなが見たいものをください。"
-prompt_text = "万一他很崇拜我们呢?嘿嘿,"
-prompt_wav_path = "/home/fish/genshin_data/zh/派蒙/vo_DQAQ003_1_paimon_06.wav"
+prompt_text = "到了八位善良的天神称为婆苏-其中老六，阿舍-尼，"
+prompt_wav_path = "dataset/zh/0-avg-cut-norm48k/0537.wav"
 
 def text2phoneid(text, lang='zh'):
     phones, word2ph, norm_text = clean_text(text, lang)
@@ -45,7 +45,7 @@ n_semantic = 1024
 device = 'cpu'
 config = load_yaml_config("configs/s1.yaml")
 
-output_dir = Path('logs/s1-mqvits')
+output_dir = Path('logs/s1')
 ckpt_dir = output_dir / 'ckpt'
 newest_ckpt_name = get_newest_ckpt(os.listdir(ckpt_dir))
 ckpt_path = ckpt_dir / newest_ckpt_name

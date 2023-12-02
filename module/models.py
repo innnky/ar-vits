@@ -635,6 +635,12 @@ class CodePredictor(nn.Module):
 
             return pred_codes.transpose(0, 1)
 
+class NullReferenceEncoder(nn.Module):
+    def __init__(self, gin_channels=0):
+        super().__init__()
+        self.gin_channels = gin_channels
+    def forward(self, x, mask):
+        return torch.zeros(x.shape[0], self.gin_channels, 1, device=x.device, dtype=x.dtype)
 
 
 class SynthesizerTrn(nn.Module):
@@ -663,6 +669,7 @@ class SynthesizerTrn(nn.Module):
                  use_sdp=True,
                  semantic_frame_rate=None,
                  freeze_quantizer=None,
+                 use_reference_enc=True,
                  **kwargs):
 
         super().__init__()
@@ -699,7 +706,10 @@ class SynthesizerTrn(nn.Module):
                                       gin_channels=gin_channels)
         self.flow = ResidualCouplingBlock(inter_channels, hidden_channels, 5, 1, 4, gin_channels=gin_channels)
 
-        self.ref_enc = modules.MelStyleEncoder(spec_channels, style_vector_dim=gin_channels)
+        if use_reference_enc:
+            self.ref_enc = modules.MelStyleEncoder(spec_channels, style_vector_dim=gin_channels)
+        else:
+            self.ref_enc = NullReferenceEncoder(gin_channels=gin_channels)
 
         ssl_dim = 768
         assert semantic_frame_rate in ['25hz', "50hz"]

@@ -16,7 +16,7 @@ def _load_model(device="cuda"):
     global vits_model_cache
     if vits_model_cache is not None:
         return vits_model_cache
-    hps = utils.get_hparams_from_file("configs/s2.json")
+    hps = utils.get_hparams_from_file("configs/s2-ft.json")
     model_dir = hps.s2_ckpt_dir
     net_g = SynthesizerTrn(
         hps.data.filter_length // 2 + 1,

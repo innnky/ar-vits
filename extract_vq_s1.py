@@ -40,7 +40,7 @@ def process_batch(filenames):
     device = torch.device(f"cuda:{gpu_id}")
     print(device)
     # ssl_model = content_module.get_model().to(device)
-    hps = utils.get_hparams_from_file("configs/s2.json")
+    hps = utils.get_hparams_from_file("configs/s2-ft.json")
     vq_model = SynthesizerTrn(
         hps.data.filter_length // 2 + 1,
         hps.train.segment_size // hps.data.hop_length,
