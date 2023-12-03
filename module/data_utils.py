@@ -76,7 +76,8 @@ class TextAudioSpeakerLoader(torch.utils.data.Dataset):
             if not (os.path.exists(audiopath) and os.path.exists(sslpath)) :
                 skipped_exist += 1
                 continue
-            if  (os.path.getsize(audiopath) / self.sampling_rate /2 > 0.6 or self.val):
+            duration = os.path.getsize(audiopath) / self.sampling_rate / 2
+            if  (20 > duration > 0.6 or self.val):
                 audiopaths_sid_text_new.append([audiopath,  phoneme_ids])
                 lengths.append(os.path.getsize(audiopath) // (2 * self.hop_length))
             else:

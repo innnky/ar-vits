@@ -70,7 +70,7 @@ def sample_vectors(samples, num: int):
 
 def kmeans(samples, num_clusters: int, num_iters: int = 10):
     dim, dtype = samples.shape[-1], samples.dtype
-    max_kmeans_samples = 500
+    max_kmeans_samples = 2000
     samples = samples[:max_kmeans_samples, :]
     means = sample_vectors(samples, num_clusters)
 
